@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analítico de Vendas - Covetrus</title>
+    
+    <!-- Bibliotecas CSS e JS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Plugin para fixar rótulos nos gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    
+    <!-- SheetJS para leitura do Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    
+    <!-- Choices.js para Seleção Múltipla Profissional -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <style>
+        /* Paleta de Cores Oficial Covetrus baseada na logo */
+        :root {
+            --covetrus-navy: #081A3F;
+            --covetrus-teal: #25B4B2;
+            --covetrus-red: #E82C2A;
+        }
+
+        .chart-container { position: relative; width: 100%; height: 100%; min-height: 300px; }
+        
+        /* Scrollbar Customizada */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Classes Utilitárias Customizadas Covetrus */
+        .bg-brand-primary { background-color: var(--covetrus-navy); }
+        .text-brand-primary { color: var(--covetrus-navy); }
+        .border-brand-primary { border-color: var(--covetrus-navy); }
+        
+        .bg-brand-secondary { background-color: var(--covetrus-teal); }
+        .text-brand-secondary { color: var(--covetrus-teal); }
+        .border-brand-secondary { border-color: var(--covetrus-teal); }
+        
+        .bg-brand-action { background-color: var(--covetrus-red); } 
+        .hover-bg-brand-action:hover { background-color: #c6211f; }
+        
+        /* Estilização dos Filtros Choices.js Compacto */
+        .choices__inner { background-color: #f8fafc; border-color: #cbd5e1; border-radius: 0.375rem; min-height: 32px !important; padding: 2px 6px !important; display: flex; align-items: center;}
+        .choices.is-focused .choices__inner { border-color: var(--covetrus-navy); box-shadow: 0 0 0 1px var(--covetrus-navy); }
+        .choices__list--multiple .choices__item { background-color: var(--covetrus-teal); border: 1px solid #1c9290; border-radius: 4px; color: white; text-shadow: 0 1px 1px rgba(0,0,0,0.2); padding: 1px 5px; font-size: 11px; margin: 2px 4px 2px 0; }
+        .choices__list--dropdown { border-color: #cbd5e1; z-index: 50; }
+        .choices { margin-bottom: 0 !important; font-size: 12px; }
+        
+        /* Tabela Fixa */
+        table th { position: sticky; top: 0; background-color: #f8fafc; z-index: 10; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .th-filter-row th { top: 36px; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Cabeçalho -->
+    <header class="bg-brand-primary text-white shadow-md z-20 shrink-0">
+        <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <!-- Logo da Empresa em Base64 -->
+                <div class="bg-white p-1 rounded shadow-sm">
+                    <img src="data:image/png;base64,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" alt="Covetrus Logo" class="h-8 object-contain">
+                </div>
+                <div class="hidden md:block">
+                    <h1 class="text-base font-bold tracking-wide">Painel de Vendas Corporativo</h1>
+                    <p class="text-[10px] text-blue-200 uppercase tracking-widest">Análise de Performance</p>
+                </div>
+            </div>
+            
+            <!-- Botão de Anexar Excel Mais Delicado -->
+            <div>
+                <input type="file" id="fileInput" accept=".xlsx" class="hidden">
+                <label for="fileInput" id="btn-upload-label" class="bg-white text-brand-primary border border-brand-primary hover:bg-slate-50 px-3 py-1.5 rounded text-xs font-bold cursor-pointer transition-all shadow-sm inline-flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-brand-action" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    CARREGAR EXCEL
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Filtros Separados Mais Compactos -->
+        <section class="bg-white border-b border-slate-200 shadow-sm z-10 p-2 shrink-0 overflow-visible">
+            <div class="container mx-auto relative">
+                
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-1 gap-2">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                        <h2 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Filtros</h2>
+                    </div>
+                    
+                    <!-- Botões de Alternância de Faturamento Reduzidos -->
+                    <div class="flex items-center bg-slate-100 p-0.5 rounded border border-slate-200 shadow-inner">
+                        <button id="btn-fat-net" onclick="setFatType('fatNet')" class="px-2 py-1 text-xs rounded bg-white shadow text-brand-primary font-bold transition-all border border-slate-200">Fat. Net</button>
+                        <button id="btn-fat-dev" onclick="setFatType('fatDev')" class="px-2 py-1 text-xs rounded text-slate-500 hover:text-slate-800 font-medium transition-all border border-transparent">Fat. - Dev.</button>
+                    </div>
+                </div>
+
+                <!-- Os 6 Filtros -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2" id="filters-container">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Ano</label>
+                        <select id="filter-ano" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Mês</label>
+                        <select id="filter-mes" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Cliente</label>
+                        <select id="filter-cliente" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Grupo</label>
+                        <select id="filter-grupo" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Produto</label>
+                        <select id="filter-produto" multiple></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 mb-0.5 ml-1 uppercase">Marca</label>
+                        <select id="filter-marca" multiple></select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Corpo do Dashboard -->
+        <main class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50">
+            <div class="container mx-auto space-y-6">
+                
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 border-l-4 border-l-brand-primary flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 font-bold mb-1">Faturamento Total</p>
+                            <h3 class="text-2xl font-bold text-brand-primary" id="kpi-faturamento">R$ 0,00</h3>
+                        </div>
+                        <div class="text-3xl opacity-80">💰</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 border-l-4 border-l-brand-secondary flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 font-bold mb-1">Volume de Itens Vendidos</p>
+                            <h3 class="text-2xl font-bold text-brand-secondary" id="kpi-volume">0</h3>
+                        </div>
+                        <div class="text-3xl opacity-80">📦</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow-sm p-4 border border-slate-100 border-l-4 border-l-brand-action flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-slate-500 font-bold mb-1">Clientes Atendidos</p>
+                            <h3 class="text-2xl font-bold text-brand-action" id="kpi-clientes">0</h3>
+                        </div>
+                        <div class="text-3xl opacity-80">🏢</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Linha: Evolução -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 lg:col-span-3 p-4 flex flex-col h-[400px]">
+                        <div class="mb-2"><h3 class="text-lg font-bold text-brand-primary">Evolução Mês a Mês do Faturamento</h3></div>
+                        <div class="flex-1 w-full relative"><div class="chart-container"><canvas id="chartEvolucaoAno"></canvas></div></div>
+                    </div>
+
+                    <!-- Barras: Top 10 Grupos -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 lg:col-span-2 p-4 flex flex-col h-[450px]">
+                        <div class="mb-2"><h3 class="text-lg font-bold text-brand-primary">Top 10 Grupos de Clientes</h3></div>
+                        <div class="flex-1 w-full relative"><div class="chart-container"><canvas id="chartTopGrupos"></canvas></div></div>
+                    </div>
+
+                    <!-- Barras: Marcas -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4 flex flex-col h-[450px]">
+                        <div class="mb-2">
+                            <h3 class="text-lg font-bold text-brand-primary">Faturamento por Marca</h3>
+                            <p class="text-xs text-slate-500">Com percentual de representatividade</p>
+                        </div>
+                        <div class="flex-1 w-full relative">
+                            <div class="chart-container"><canvas id="chartMarcas"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Barras: Top 10 Produtos -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 lg:col-span-3 p-4 flex flex-col h-[500px]">
+                        <div class="mb-2"><h3 class="text-lg font-bold text-brand-primary">Top 10 Produtos em Faturamento</h3></div>
+                        <div class="flex-1 w-full relative"><div class="chart-container"><canvas id="chartTopProdutos"></canvas></div></div>
+                    </div>
+                </div>
+
+                <!-- Tabela de Detalhamento com Filtros Rápidos -->
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4 flex flex-col h-[600px]">
+                    <div class="mb-4 flex justify-between items-end">
+                        <div>
+                            <h3 class="text-lg font-bold text-brand-primary">Detalhamento de Vendas: Visão Analítica</h3>
+                            <p class="text-xs text-slate-500">Busque rapidamente digitando nas caixas abaixo do cabeçalho da tabela.</p>
+                        </div>
+                        <span id="table-count" class="text-xs font-semibold text-brand-primary bg-slate-100 px-3 py-1 rounded-full border border-slate-300"></span>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scrollbar border rounded-md relative">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100">Ano/Mês</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100">Grupo Cliente</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100">Cliente</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100">Marca / Produto</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100 text-center">Desconto</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100 text-right">Vol.</th>
+                                    <th class="p-3 border-b font-bold text-xs text-slate-700 uppercase tracking-wider bg-slate-100 text-right">Val. Unit.</th>
+                                    <th class="p-3 border-b font-bold text-xs text-brand-primary uppercase tracking-wider bg-slate-100 text-right">Faturamento</th>
+                                </tr>
+                                <!-- Linha de Busca/Filtro da Tabela (Única) -->
+                                <tr class="th-filter-row bg-white border-b-2 border-slate-300">
+                                    <th class="px-2"><input type="text" id="t-search-data" class="w-full border rounded p-1.5 text-xs font-normal text-slate-700 focus:ring-brand-secondary focus:border-brand-secondary" placeholder="Filtrar data..."></th>
+                                    <th class="px-2"><input type="text" id="t-search-grupo" class="w-full border rounded p-1.5 text-xs font-normal text-slate-700 focus:ring-brand-secondary focus:border-brand-secondary" placeholder="Filtrar grupo..."></th>
+                                    <th class="px-2"><input type="text" id="t-search-cliente" class="w-full border rounded p-1.5 text-xs font-normal text-slate-700 focus:ring-brand-secondary focus:border-brand-secondary" placeholder="Filtrar cliente..."></th>
+                                    <th class="px-2"><input type="text" id="t-search-prod" class="w-full border rounded p-1.5 text-xs font-normal text-slate-700 focus:ring-brand-secondary focus:border-brand-secondary" placeholder="Filtrar marca/produto..."></th>
+                                    <th colspan="4"></th> 
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="bg-white">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- Registro do Plugin de Textos Fixos para o Chart.js ---
+        Chart.register(ChartDataLabels);
+        Chart.defaults.plugins.datalabels = { display: false }; 
+
+        // --- Variáveis Globais de Estado ---
+        let rawData = [];
+        let filteredData = [];
+        let charts = {};
+        let choiceInstances = {};
+        let currentFatType = 'fatNet'; 
+
+        const MONTHS_ORDER = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        
+        // Paleta baseada nas cores da Logo Covetrus para os gráficos
+        const CHART_COLORS = ['#081A3F', '#25B4B2', '#E82C2A', '#004b87', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f97316', '#64748b'];
+
+        const formatBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatNum = new Intl.NumberFormat('pt-BR');
+        const formatPercent = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1 });
+
+        // --- Função para Alternar Faturamento ---
+        function setFatType(type) {
+            currentFatType = type;
+            
+            const btnNet = document.getElementById('btn-fat-net');
+            const btnDev = document.getElementById('btn-fat-dev');
+
+            if (type === 'fatNet') {
+                btnNet.className = "px-2 py-1 text-xs rounded bg-white shadow text-brand-primary font-bold transition-all border border-slate-200";
+                btnDev.className = "px-2 py-1 text-xs rounded text-slate-500 hover:text-slate-800 font-medium transition-all border border-transparent";
+            } else {
+                btnDev.className = "px-2 py-1 text-xs rounded bg-white shadow text-brand-primary font-bold transition-all border border-slate-200";
+                btnNet.className = "px-2 py-1 text-xs rounded text-slate-500 hover:text-slate-800 font-medium transition-all border border-transparent";
+            }
+
+            if(rawData.length > 0) {
+                applyGlobalFilters();
+            }
+        }
+
+        // --- Leitura do Excel (SheetJS) ---
+        function parseMoney(valStr) {
+            if (valStr === undefined || valStr === null || valStr === '') return 0;
+            let cleaned = String(valStr).replace(/R\$/g, '').trim();
+            if (cleaned.includes(',') && cleaned.includes('.')) {
+                cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+            } else if (cleaned.includes(',')) {
+                cleaned = cleaned.replace(',', '.');
+            }
+            const val = parseFloat(cleaned);
+            return isNaN(val) ? 0 : val;
+        }
+
+        function processDataEngine(dataRows) {
+            if (!dataRows || dataRows.length < 2) return;
+
+            let headerIdx = 0;
+            for(let i=0; i<Math.min(10, dataRows.length); i++){
+                if(dataRows[i].some(c => String(c).toLowerCase().includes('cliente') || String(c).toLowerCase().includes('produto'))) {
+                    headerIdx = i; break;
+                }
+            }
+
+            const headers = dataRows[headerIdx].map(h => String(h || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim());
+            
+            let cMap = { ano: -1, mes: -1, cliente: -1, grupo: -1, marca: -1, produto: -1, fatNet: -1, fatDev: -1, desconto: -1, vendas: -1 };
+            
+            headers.forEach((h, i) => {
+                if (h.includes('ano')) cMap.ano = i;
+                else if (h.includes('mes') || (h.includes('m') && h.includes('s') && h.length < 15)) cMap.mes = i;
+                else if (h.includes('grupo')) cMap.grupo = i;
+                else if (h.includes('cliente') && !h.includes('grupo')) cMap.cliente = i;
+                else if (h.includes('marca')) cMap.marca = i;
+                else if (h.includes('produto')) cMap.produto = i;
+                else if (h.includes('net') || h.includes('fat. net')) cMap.fatNet = i;
+                else if (h.includes('fat') && h.includes('dev')) cMap.fatDev = i;
+                else if (h.includes('desconto')) cMap.desconto = i;
+                else if (h.includes('venda') || h.includes('quant')) cMap.vendas = i;
+            });
+
+            if (cMap.ano === -1) cMap.ano = 1;
+            if (cMap.mes === -1) cMap.mes = 2;
+            if (cMap.cliente === -1) cMap.cliente = 3;
+            if (cMap.grupo === -1) cMap.grupo = 4;
+            if (cMap.marca === -1) cMap.marca = 6;
+            if (cMap.produto === -1) cMap.produto = 7;
+            if (cMap.fatDev === -1) cMap.fatDev = 8; 
+            if (cMap.fatNet === -1) cMap.fatNet = 9; 
+            if (cMap.desconto === -1) cMap.desconto = 10;
+            if (cMap.vendas === -1) cMap.vendas = 11;
+
+            const parsedData = [];
+            
+            for (let i = headerIdx + 1; i < dataRows.length; i++) {
+                const row = dataRows[i];
+                if (!row || row.length < 5) continue;
+                
+                const getVal = (idx) => row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+                
+                let ano = getVal(cMap.ano);
+                let cliente = getVal(cMap.cliente);
+                
+                let rawMes = getVal(cMap.mes).toLowerCase().trim();
+                let mes = '';
+                if (rawMes.includes('jan') || rawMes === '1' || rawMes === '01') mes = 'jan';
+                else if (rawMes.includes('fev') || rawMes === '2' || rawMes === '02') mes = 'fev';
+                else if (rawMes.includes('mar') || rawMes === '3' || rawMes === '03') mes = 'mar';
+                else if (rawMes.includes('abr') || rawMes === '4' || rawMes === '04') mes = 'abr';
+                else if (rawMes.includes('mai') || rawMes === '5' || rawMes === '05') mes = 'mai';
+                else if (rawMes.includes('jun') || rawMes === '6' || rawMes === '06') mes = 'jun';
+                else if (rawMes.includes('jul') || rawMes === '7' || rawMes === '07') mes = 'jul';
+                else if (rawMes.includes('ago') || rawMes === '8' || rawMes === '08') mes = 'ago';
+                else if (rawMes.includes('set') || rawMes === '9' || rawMes === '09') mes = 'set';
+                else if (rawMes.includes('out') || rawMes === '10') mes = 'out';
+                else if (rawMes.includes('nov') || rawMes === '11') mes = 'nov';
+                else if (rawMes.includes('dez') || rawMes === '12') mes = 'dez';
+
+                let fNetRaw = row[cMap.fatNet];
+                let fatNet = typeof fNetRaw === 'number' ? fNetRaw : parseMoney(String(fNetRaw));
+                
+                let fDevRaw = row[cMap.fatDev];
+                let fatDev = typeof fDevRaw === 'number' ? fDevRaw : parseMoney(String(fDevRaw));
+
+                let descRaw = row[cMap.desconto];
+                let desconto = 0;
+                if (typeof descRaw === 'number') {
+                    desconto = descRaw > 1 ? descRaw / 100 : descRaw;
+                } else if (descRaw) {
+                    desconto = parseFloat(String(descRaw).replace(',','.').replace('%','')) / 100;
+                }
+                if (isNaN(desconto)) desconto = 0;
+
+                let vQtdRaw = row[cMap.vendas];
+                let vendasQuant = typeof vQtdRaw === 'number' ? vQtdRaw : parseInt(String(vQtdRaw).replace(/\D/g, '')) || 0;
+
+                if (ano && mes && cliente) {
+                    parsedData.push({ 
+                        ano: String(ano), 
+                        mes: String(mes), 
+                        cliente: String(cliente).toUpperCase(), 
+                        grupoCliente: String(getVal(cMap.grupo)).toUpperCase() || 'SEM GRUPO', 
+                        marca: String(getVal(cMap.marca)).toUpperCase() || 'SEM MARCA', 
+                        produto: String(getVal(cMap.produto)).toUpperCase() || 'NÃO INFORMADO', 
+                        fatNet: fatNet || 0, 
+                        fatDev: fatDev || 0,
+                        desconto: desconto,
+                        vendasQuant: vendasQuant || 0 
+                    });
+                }
+            }
+
+            if (parsedData.length > 0) {
+                rawData = parsedData;
+                initDashboard();
+            }
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                alert("Por favor, envie um arquivo XLSX!"); e.target.value = ''; return;
+            }
+
+            // Alterar o texto do botão para dar feedback visual sem ocupar espaço na tela
+            const labelUpload = document.getElementById('btn-upload-label');
+            const originalContent = labelUpload.innerHTML;
+            labelUpload.innerHTML = '⏳ PROCESSANDO...';
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const jsonArray = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1, defval: '' });
+                    processDataEngine(jsonArray);
+                } catch (error) { 
+                    alert("Erro ao processar o Excel."); 
+                }
+                e.target.value = ''; 
+                labelUpload.innerHTML = originalContent; // Restaura o botão
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // --- Utils e Renderização de Gráficos ---
+        function groupAndSum(data, groupByField, sumField) {
+            const result = data.reduce((acc, curr) => {
+                const key = curr[groupByField];
+                if (!key) return acc;
+                acc[key] = (acc[key] || 0) + curr[sumField];
+                return acc;
+            }, {});
+            return Object.keys(result).map(key => ({ label: key, value: result[key] }));
+        }
+
+        function getTopN(groupedData, n) { return groupedData.sort((a, b) => b.value - a.value).slice(0, n); }
+        function truncateLabel(label, maxLen = 40) { return (typeof label === 'string' && label.length > maxLen) ? label.substring(0, maxLen) + '...' : label; }
+
+        Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, sans-serif';
+        Chart.defaults.color = '#64748b';
+
+        function renderCharts(data) {
+            const totalFaturamento = data.reduce((sum, item) => sum + item[currentFatType], 0);
+            const nomeFatType = currentFatType === 'fatNet' ? 'Líquido' : 'Bruto/Dev.';
+
+            // KPIs
+            document.getElementById('kpi-faturamento').textContent = formatBRL.format(totalFaturamento);
+            document.getElementById('kpi-volume').textContent = formatNum.format(data.reduce((sum, item) => sum + item.vendasQuant, 0));
+            document.getElementById('kpi-clientes').textContent = formatNum.format(new Set(data.map(i => i.cliente)).size);
+
+            const ctxEvo = document.getElementById('chartEvolucaoAno').getContext('2d');
+            const ctxCli = document.getElementById('chartTopGrupos').getContext('2d');
+            const ctxProd = document.getElementById('chartTopProdutos').getContext('2d');
+            const ctxMarc = document.getElementById('chartMarcas').getContext('2d');
+
+            if (charts.evo) charts.evo.destroy(); if (charts.cli) charts.cli.destroy();
+            if (charts.prod) charts.prod.destroy(); if (charts.marc) charts.marc.destroy();
+
+            // -- Evolução
+            let years = [...new Set(data.map(d => d.ano))].filter(Boolean).sort();
+            charts.evo = new Chart(ctxEvo, {
+                type: 'line',
+                data: { 
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'], 
+                    datasets: years.map((year, i) => {
+                        const monthly = groupAndSum(data.filter(d => d.ano === year), 'mes', currentFatType);
+                        return {
+                            label: `Ano ${year}`, 
+                            data: MONTHS_ORDER.map(m => { const f = monthly.find(x => x.label === m); return f ? f.value : null; }),
+                            borderColor: CHART_COLORS[i % CHART_COLORS.length], 
+                            backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '20',
+                            borderWidth: 3, 
+                            tension: 0.3, 
+                            fill: true, 
+                            pointRadius: 5,
+                            pointBackgroundColor: CHART_COLORS[i % CHART_COLORS.length]
+                        };
+                    })
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    layout: { padding: { top: 30, right: 20 } },
+                    plugins: { 
+                        tooltip: { callbacks: { label: c => `${c.dataset.label} (${nomeFatType}): ${formatBRL.format(c.raw)}` } },
+                        datalabels: {
+                            display: function(context) { return context.dataset.data[context.dataIndex] !== null && context.dataset.data[context.dataIndex] > 0; },
+                            align: 'top',
+                            anchor: 'end',
+                            offset: 6,
+                            color: function(context) { return context.dataset.borderColor; },
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (v) => formatBRL.format(v)
+                        }
+                    }, 
+                    scales: { 
+                        y: { 
+                            ticks: { callback: v => formatBRL.format(v) },
+                            grace: '10%' 
+                        } 
+                    } 
+                }
+            });
+
+            // -- Top Grupos
+            const topGrupos = getTopN(groupAndSum(data, 'grupoCliente', currentFatType), 10);
+            charts.cli = new Chart(ctxCli, {
+                type: 'bar',
+                data: { 
+                    labels: topGrupos.map(i => truncateLabel(i.label, 30)), 
+                    datasets: [{ label: 'Faturamento', data: topGrupos.map(i => i.value), backgroundColor: '#25B4B2', borderRadius: 4 }] 
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    layout: { padding: { right: 100 } }, 
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { callbacks: { label: c => formatBRL.format(c.raw) } },
+                        datalabels: {
+                            display: true,
+                            align: 'right',
+                            anchor: 'end',
+                            color: '#475569',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (v) => formatBRL.format(v)
+                        }
+                    }, 
+                    scales: { x: { display: false, min: 0 } } 
+                }
+            });
+
+            // -- Top Produtos
+            const topProd = getTopN(groupAndSum(data, 'produto', currentFatType), 10);
+            charts.prod = new Chart(ctxProd, {
+                type: 'bar',
+                data: { 
+                    labels: topProd.map(i => truncateLabel(i.label, 45)), 
+                    datasets: [{ label: 'Faturamento', data: topProd.map(i => i.value), backgroundColor: '#081A3F', borderRadius: 4 }] 
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    layout: { padding: { right: 100 } },
+                    plugins: { 
+                        legend: { display: false }, 
+                        tooltip: { callbacks: { label: c => formatBRL.format(c.raw) } },
+                        datalabels: {
+                            display: true,
+                            align: 'right',
+                            anchor: 'end',
+                            color: '#475569',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (v) => formatBRL.format(v)
+                        }
+                    }, 
+                    scales: { x: { display: false, min: 0 } } 
+                }
+            });
+
+            // -- Representatividade de Marcas
+            const topMarc = getTopN(groupAndSum(data, 'marca', currentFatType), 10);
+            const percentData = topMarc.map(item => ((item.value / (totalFaturamento || 1)) * 100).toFixed(1));
+
+            charts.marc = new Chart(ctxMarc, {
+                type: 'bar',
+                data: { 
+                    labels: topMarc.map(i => truncateLabel(i.label, 20)), 
+                    datasets: [{ 
+                        label: 'Faturamento',
+                        data: topMarc.map(i => i.value), 
+                        backgroundColor: '#E82C2A', 
+                        borderRadius: 4 
+                    }] 
+                },
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    layout: { padding: { right: 130 } }, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { 
+                            callbacks: { 
+                                label: function(context) {
+                                    const val = formatBRL.format(context.raw);
+                                    const pct = percentData[context.dataIndex];
+                                    return `${val} (${pct}%)`;
+                                }
+                            } 
+                        },
+                        datalabels: {
+                            display: true,
+                            anchor: 'end',
+                            align: 'right',
+                            color: '#475569',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: function(value, context) {
+                                const pct = percentData[context.dataIndex];
+                                return `${formatBRL.format(value)} (${pct}%)`;
+                            }
+                        }
+                    },
+                    scales: { x: { display: false, min: 0 } } 
+                }
+            });
+        }
+
+        // --- Lógica da Tabela ---
+        function renderTable() {
+            const sData = document.getElementById('t-search-data').value.toLowerCase();
+            const sGrupo = document.getElementById('t-search-grupo').value.toLowerCase();
+            const sCliente = document.getElementById('t-search-cliente').value.toLowerCase();
+            const sProd = document.getElementById('t-search-prod').value.toLowerCase();
+
+            let tableData = filteredData.filter(item => {
+                const combinedData = (item.ano + '/' + item.mes).toLowerCase();
+                const combinedProd = (item.marca + ' ' + item.produto).toLowerCase();
+                return combinedData.includes(sData) &&
+                       item.grupoCliente.toLowerCase().includes(sGrupo) &&
+                       item.cliente.toLowerCase().includes(sCliente) &&
+                       combinedProd.includes(sProd);
+            });
+
+            tableData = tableData.sort((a,b) => b[currentFatType] - a[currentFatType]).slice(0, 300);
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            tableData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition-colors";
+                
+                let descClass = "text-slate-600";
+                if(item.desconto > 0.15) descClass = "text-brand-action font-bold";
+
+                // Cálculo automático do valor unitário
+                let valorUnitario = item.vendasQuant > 0 ? (item[currentFatType] / item.vendasQuant) : 0;
+
+                tr.innerHTML = `
+                    <td class="p-3 border-b text-sm whitespace-nowrap text-slate-500">${item.ano} / <span class="capitalize">${item.mes}</span></td>
+                    <td class="p-3 border-b text-xs text-slate-500">${item.grupoCliente}</td>
+                    <td class="p-3 border-b text-sm font-medium text-slate-800">${item.cliente}</td>
+                    <td class="p-3 border-b text-xs text-slate-600">
+                        <span class="font-semibold text-brand-secondary">${item.marca}</span><br/>${item.produto}
+                    </td>
+                    <td class="p-3 border-b text-sm text-center ${descClass}">${formatPercent.format(item.desconto)}</td>
+                    <td class="p-3 border-b text-sm text-slate-600 text-right">${formatNum.format(item.vendasQuant)}</td>
+                    <td class="p-3 border-b text-sm text-slate-600 text-right font-medium">${formatBRL.format(valorUnitario)}</td>
+                    <td class="p-3 border-b text-sm font-bold text-brand-primary text-right">${formatBRL.format(item[currentFatType])}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            let extraMsg = filteredData.length > 300 ? " (Exibindo Top 300 Linhas)" : "";
+            document.getElementById('table-count').textContent = `Total Analisado: ${formatNum.format(filteredData.length)} registros ${extraMsg}`;
+        }
+
+        ['t-search-data', 't-search-grupo', 't-search-cliente', 't-search-prod'].forEach(id => {
+            document.getElementById(id).addEventListener('input', renderTable);
+        });
+
+        // --- Lógica de Filtros Multi-Select ---
+        function getChoicesValues(fieldId) {
+            if(!choiceInstances[fieldId]) return [];
+            const values = choiceInstances[fieldId].getValue(true);
+            return Array.isArray(values) ? values : (values ? [values] : []);
+        }
+
+        function applyGlobalFilters() {
+            const fAno = getChoicesValues('ano');
+            const fMes = getChoicesValues('mes');
+            const fCliente = getChoicesValues('cliente');
+            const fGrupo = getChoicesValues('grupo');
+            const fProduto = getChoicesValues('produto');
+            const fMarca = getChoicesValues('marca');
+
+            filteredData = rawData.filter(i => {
+                return (fAno.length === 0 || fAno.includes(i.ano)) &&
+                       (fMes.length === 0 || fMes.includes(i.mes)) &&
+                       (fMarca.length === 0 || fMarca.includes(i.marca)) &&
+                       (fProduto.length === 0 || fProduto.includes(i.produto)) &&
+                       (fCliente.length === 0 || fCliente.includes(i.cliente)) &&
+                       (fGrupo.length === 0 || fGrupo.includes(i.grupoCliente));
+            });
+
+            renderCharts(filteredData);
+            renderTable();
+        }
+
+        function initChoicesDropdown(fieldId, dataField) {
+            const el = document.getElementById('filter-' + fieldId);
+            
+            let uniqueValues = [...new Set(rawData.map(item => item[dataField]))].filter(Boolean);
+            if (dataField === 'mes') uniqueValues = [...MONTHS_ORDER];
+            else uniqueValues.sort();
+
+            const choicesData = uniqueValues.map(val => {
+                let label = val;
+                if (dataField === 'mes') {
+                    const dict = {'jan':'Janeiro', 'fev':'Fevereiro', 'mar':'Março', 'abr':'Abril', 'mai':'Maio', 'jun':'Junho', 'jul':'Julho', 'ago':'Agosto', 'set':'Setembro', 'out':'Outubro', 'nov':'Novembro', 'dez':'Dezembro'};
+                    label = dict[val] || val;
+                }
+                return { value: String(val), label: String(label) };
+            });
+
+            if (choiceInstances[fieldId]) {
+                choiceInstances[fieldId].clearStore();
+                choiceInstances[fieldId].setChoices(choicesData, 'value', 'label', true);
+            } else {
+                choiceInstances[fieldId] = new Choices(el, {
+                    removeItemButton: true,
+                    placeholder: true,
+                    placeholderValue: 'Todos...',
+                    searchPlaceholderValue: 'Procurar...',
+                    noResultsText: 'Não encontrado',
+                    itemSelectText: '',
+                    shouldSort: false,
+                    position: 'bottom'
+                });
+                choiceInstances[fieldId].setChoices(choicesData, 'value', 'label', true);
+                el.addEventListener('change', applyGlobalFilters);
+            }
+        }
+
+        function initDashboard() {
+            initChoicesDropdown('ano', 'ano');
+            initChoicesDropdown('mes', 'mes');
+            initChoicesDropdown('cliente', 'cliente');
+            initChoicesDropdown('grupo', 'grupoCliente');
+            initChoicesDropdown('produto', 'produto');
+            initChoicesDropdown('marca', 'marca');
+            
+            ['t-search-data', 't-search-grupo', 't-search-cliente', 't-search-prod'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+
+            applyGlobalFilters();
+        }
+
+        // --- Start Simulado ---
+        const dummyData = [
+            ["", "Ano", "Mês", "Cliente", "Grupo Cliente", "Linha", "Marca", "Produto", "Fat. - Dev.", "Fat Net", "Desconto", "Qtd"],
+            ["", "2026", "jan", "PETSISTER RACOES LTDA - 34767", "PET SISTER - 18412", "-", "AGENER PET", "AGEMOXI 50MG X 10 COMP - 607003", 3707.25, 2891.66, 0.25, 100],
+            ["", "2026", "jan", "PETSISTER RACOES LTDA - 34767", "PET SISTER - 18412", "-", "AGENER PET", "ANALGEX V INJ FA 50ML - 607007", 41.53, 41.53, 0.15, 2],
+            ["", "2026", "fev", "PET SHOP SAUDE - 123", "VAREJO - 100", "-", "AGENER PET", "BALL FREE PASTA ORAL 70G - 607008", 508.41, 359.88, 0.20, 12],
+            ["", "2024", "dez", "ANA LUCIA VAILLANT - 9716", "CLINICAS IND. - 200", "-", "KRUUSE MULTIESPÉCIE", "SONDA URET FELINA BARIO 1.0X130MM", 52.25, 36.99, 0.05, 4],
+            ["", "2024", "dez", "ANA LUCIA VAILLANT - 9716", "CLINICAS IND. - 200", "-", "KRUUSE MULTIESPÉCIE", "FOCINHEIRA KRUUSE 1 - 145031", 49.00, 34.68, 0, 1]
+        ];
+        processDataEngine(dummyData);
+
+    </script>
+</body>
+</html>
